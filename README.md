@@ -44,10 +44,11 @@ Copy `.env.example` into your environment or export variables before running. Th
 - `PACKET_RETENTION_SECONDS` (packet database retention; default 7200 seconds)
 - `PACKET_DB_PATH` (SQLite DB path; default `/data/packets.db`)
 
-Optional:
-- `ROLE_OVERRIDES_FILE` points to a JSON file mapping node_id to role.
-
 ## Notes
 
 - Node ids are inferred from payload fields or topic segments. Customize `NODE_ID_KEYS` and `TOPIC_SUFFIXES` in `backend/app.py` if your topics differ.
 - $SYS metrics only appear if the broker exposes them.
+
+---
+
+Vibe coded with Codex.
