@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MQTT Observatory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #e7edf5;
+        --muted: #9aa7b6;
+        --panel: #0f1823;
+        --panel-strong: #172333;
+        --accent: #4aa3ff;
+        --accent-2: #5de2c5;
+        --accent-3: #ffbe6b;
+        --warn: #ff7b66;
+        --grid: rgba(255, 255, 255, 0.08);
+        --shadow: 0 26px 64px rgba(0, 0, 0, 0.38);
+        --bg-gradient:
+          radial-gradient(circle at 18% 15%, rgba(74, 163, 255, 0.22), transparent 60%),
+          radial-gradient(circle at 80% 10%, rgba(93, 226, 197, 0.18), transparent 55%),
+          radial-gradient(circle at 85% 80%, rgba(255, 190, 107, 0.12), transparent 50%),
+          linear-gradient(160deg, #0a1119 0%, #0f1a27 50%, #0b1320 100%);
+        --grid-stripe: transparent;
+      }
+
+      [data-theme="light"] {
+        --ink: #1b2430;
+        --muted: #5a6a7a;
+        --panel: #f4f6fb;
+        --panel-strong: #e9eef6;
+        --accent: #1f6fe0;
+        --accent-2: #158a6a;
+        --accent-3: #f0b24a;
+        --warn: #d4584f;
+        --grid: rgba(24, 40, 64, 0.12);
+        --shadow: 0 18px 50px rgba(17, 34, 56, 0.12);
+        --bg-gradient:
+          radial-gradient(circle at 18% 15%, rgba(31, 111, 224, 0.18), transparent 60%),
+          radial-gradient(circle at 82% 12%, rgba(21, 138, 106, 0.1), transparent 50%),
+          radial-gradient(circle at 88% 75%, rgba(240, 178, 74, 0.12), transparent 50%),
+          linear-gradient(160deg, #f5f7fb 0%, #eef2f7 52%, #f8fafd 100%);
+        --grid-stripe: transparent;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+        color: var(--ink);
+        overflow-x: hidden;
+        background: var(--bg-gradient);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: none;
+        background-size: 100% 28px;
+        pointer-events: none;
+        opacity: 0.45;
+      }
+
+      .app {
+        position: relative;
+        padding: 36px 40px 48px;
+        max-width: 1280px;
+        margin: 0 auto;
+        animation: fade-in 600ms ease-out;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+
+      .header-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .title-block h1 {
+        margin: 0;
+        font-size: 2.2rem;
+        letter-spacing: -0.02em;
+      }
+
+      .title-block p {
+        margin: 6px 0 0;
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.72rem;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--warn);
+        box-shadow: 0 0 0 4px rgba(255, 141, 109, 0.2);
+      }
+
+      .status-pill.connected .status-dot {
+        background: var(--accent-2);
+        box-shadow: 0 0 0 4px rgba(109, 214, 168, 0.2);
+      }
+
+      .theme-toggle {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: var(--panel);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+      }
+
+      [data-theme="light"] .theme-toggle {
+        border-color: rgba(24, 40, 64, 0.2);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid rgba(93, 75, 52, 0.08);
+        border-radius: 18px;
+        padding: 18px 18px 16px;
+        box-shadow: var(--shadow);
+        min-width: 0;
+        animation: rise 540ms ease-out;
+      }
+
+      .card h3 {
+        margin: 0 0 12px;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .metric-value {
+        font-size: 1.9rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        overflow-wrap: anywhere;
+      }
+
+      .metric-sub {
+        margin-top: 8px;
+        font-size: 0.86rem;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+        gap: 24px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid rgba(93, 75, 52, 0.08);
+        border-radius: 22px;
+        padding: 18px 18px 20px;
+        box-shadow: var(--shadow);
+      }
+
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 1.1rem;
+      }
+
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .filters input[type="text"] {
+        flex: 1;
+        min-width: 200px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(10, 14, 18, 0.6);
+        color: var(--ink);
+        font-family: "Space Grotesk", sans-serif;
+      }
+
+      [data-theme="light"] .filters input[type="text"] {
+        border-color: rgba(24, 40, 64, 0.2);
+        background: #fff;
+        color: var(--ink);
+      }
+
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .toggle input {
+        accent-color: var(--accent-2);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 0.92rem;
+      }
+
+      th,
+      td {
+        overflow-wrap: anywhere;
+      }
+
+      thead th {
+        text-align: left;
+        font-size: 0.74rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--grid);
+      }
+
+      tbody td {
+        padding: 12px 8px;
+        border-bottom: 1px dashed var(--grid);
+      }
+
+      tbody tr {
+        cursor: pointer;
+        transition: background 150ms ease;
+      }
+
+      tbody tr:hover {
+        background: rgba(15, 108, 109, 0.08);
+      }
+
+      tbody tr.selected {
+        background: rgba(217, 121, 39, 0.16);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      .node-name {
+        font-weight: 600;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        background: rgba(88, 192, 247, 0.18);
+        color: var(--accent);
+      }
+
+      .tag.offline {
+        background: rgba(255, 141, 109, 0.16);
+        color: var(--warn);
+      }
+
+      .details-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px 14px;
+        margin: 12px 0 0;
+        min-width: 0;
+      }
+
+      .detail {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: var(--panel-strong);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 0.85rem;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .detail span {
+        display: block;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .mono {
+        font-family: "IBM Plex Mono", "Courier New", monospace;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .sys-list {
+        max-height: 280px;
+        overflow-y: auto;
+        padding-right: 6px;
+      }
+
+      .sys-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px dashed var(--grid);
+        font-size: 0.86rem;
+      }
+
+      .sys-item span {
+        color: var(--muted);
+      }
+
+      .footer-note {
+        margin-top: 18px;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 980px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .app {
+          padding: 24px 18px 36px;
+        }
+
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+
+        table {
+          font-size: 0.85rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="title-block">
+          <h1 id="dash-title">MQTT Observatory</h1>
+          <p id="dash-subtitle">Live node presence, roles, and broker telemetry.</p>
+        </div>
+        <div class="header-actions">
+          <button class="theme-toggle" id="theme-toggle" type="button">Light Mode</button>
+          <div class="status-pill" id="status-pill">
+            <span class="status-dot"></span>
+            <span id="status-text">Disconnected</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="metrics">
+        <div class="card">
+          <h3>Broker</h3>
+          <div class="metric-value" id="broker-host">--</div>
+          <div class="metric-sub" id="broker-meta">--</div>
+        </div>
+        <div class="card">
+          <h3>Nodes Online</h3>
+          <div class="metric-value" id="nodes-online">0</div>
+          <div class="metric-sub" id="nodes-total">0 total nodes tracked</div>
+        </div>
+        <div class="card">
+          <h3>Traffic Rate</h3>
+          <div class="metric-value" id="messages-rate">0/min</div>
+          <div class="metric-sub" id="messages-total">0 messages total</div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h2>Nodes</h2>
+        <div class="filters">
+            <input type="text" id="node-filter" placeholder="Search by node name or id" />
+            <label class="toggle">
+              <input type="checkbox" id="online-only" />
+              Online only
+            </label>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Node</th>
+                  <th>Last Seen</th>
+                </tr>
+              </thead>
+              <tbody id="node-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Node Detail</h2>
+          <div id="node-detail">
+            <p class="metric-sub">Select a node to see its details.</p>
+          </div>
+
+          <h2 style="margin-top: 24px;">Broker Detail</h2>
+          <div id="broker-detail"></div>
+
+          <h2 style="margin-top: 24px;">$SYS Topics</h2>
+          <input type="text" id="sys-filter" placeholder="Filter $SYS topics" style="width: 100%; margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(93, 75, 52, 0.18);" />
+          <div class="sys-list" id="sys-list"></div>
+        </div>
+      </section>
+
+      <p class="footer-note">Streaming MQTT data in real time. $SYS metrics appear when the broker exposes them.</p>
+    </div>
+
+    <script>
+      const state = {
+        nodes: new Map(),
+        sysTopics: {},
+        broker: {},
+        stats: {},
+      };
+
+      const elements = {
+        title: document.getElementById("dash-title"),
+        subtitle: document.getElementById("dash-subtitle"),
+        statusPill: document.getElementById("status-pill"),
+        statusText: document.getElementById("status-text"),
+        brokerHost: document.getElementById("broker-host"),
+        brokerMeta: document.getElementById("broker-meta"),
+        nodesOnline: document.getElementById("nodes-online"),
+        nodesTotal: document.getElementById("nodes-total"),
+        messagesRate: document.getElementById("messages-rate"),
+        messagesTotal: document.getElementById("messages-total"),
+        nodeTable: document.getElementById("node-table"),
+        nodeDetail: document.getElementById("node-detail"),
+        brokerDetail: document.getElementById("broker-detail"),
+        sysList: document.getElementById("sys-list"),
+        nodeFilter: document.getElementById("node-filter"),
+        onlineOnly: document.getElementById("online-only"),
+        sysFilter: document.getElementById("sys-filter"),
+        themeToggle: document.getElementById("theme-toggle"),
+      };
+
+      let selectedNodeId = null;
+
+      function formatAge(timestamp) {
+        if (!timestamp) return "--";
+        const delta = Math.max(0, Math.floor(Date.now() / 1000 - timestamp));
+        if (delta < 60) return `${delta}s`;
+        if (delta < 3600) return `${Math.floor(delta / 60)}m`;
+        if (delta < 86400) return `${Math.floor(delta / 3600)}h`;
+        return `${Math.floor(delta / 86400)}d`;
+      }
+
+      function formatClock(timestamp) {
+        if (!timestamp) return "--";
+        const date = new Date(timestamp * 1000);
+        return date.toLocaleTimeString();
+      }
+
+      function formatNumber(value) {
+        if (value === null || value === undefined) return "--";
+        if (typeof value === "number") return value.toLocaleString();
+        return String(value);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function formatUptime(value) {
+        if (value === null || value === undefined) return "--";
+        if (typeof value === "number") {
+          const seconds = value;
+          const days = Math.floor(seconds / 86400);
+          const hours = Math.floor((seconds % 86400) / 3600);
+          const minutes = Math.floor((seconds % 3600) / 60);
+          const parts = [];
+          if (days) parts.push(`${days}d`);
+          parts.push(`${hours}h`);
+          parts.push(`${minutes}m`);
+          return parts.join(" ");
+        }
+        return String(value);
+      }
+
+      function formatRetention(value) {
+        if (!value || value <= 0) return "--";
+        const seconds = Number(value);
+        if (!Number.isFinite(seconds)) return "--";
+        if (seconds < 60) return `${seconds}s`;
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+        return `${Math.floor(seconds / 86400)}d`;
+      }
+
+      function isOnline(node) {
+        const windowSeconds = state.broker.online_seconds || 300;
+        return node.last_seen && (Date.now() / 1000 - node.last_seen) <= windowSeconds;
+      }
+
+      function applySnapshot(data) {
+        state.broker = data.broker || {};
+        state.stats = data.stats || {};
+        state.sysTopics = data.sys_topics || {};
+        state.nodes = new Map();
+        (data.nodes || []).forEach((node) => {
+          state.nodes.set(node.node_id, node);
+        });
+        if (!selectedNodeId && state.nodes.size) {
+          selectedNodeId = state.nodes.keys().next().value;
+        }
+        renderAll();
+      }
+
+      function applyNodeUpdate(node, stats) {
+        state.nodes.set(node.node_id, node);
+        if (stats) {
+          state.stats = stats;
+        }
+        if (!selectedNodeId) {
+          selectedNodeId = node.node_id;
+        }
+        renderAll();
+      }
+
+      function applySysUpdate(topic, value) {
+        state.sysTopics[topic] = {
+          value,
+          ts: Date.now() / 1000,
+        };
+        renderSys();
+        renderStats();
+      }
+
+      function applyBrokerUpdate(broker) {
+        state.broker = broker || {};
+        renderBroker();
+        renderStats();
+      }
+
+      function renderAll() {
+        renderBroker();
+        renderStats();
+        renderNodes();
+        renderNodeDetail();
+        renderSys();
+        renderBrokerDetail();
+      }
+
+      function renderBroker() {
+        const connected = Boolean(state.broker.connected);
+        elements.statusPill.classList.toggle("connected", connected);
+        elements.statusText.textContent = connected ? "Connected" : "Disconnected";
+        const host = state.broker.host ? `${state.broker.host}:${state.broker.port}` : "--";
+        elements.brokerHost.textContent = host;
+        const transport = state.broker.transport || "tcp";
+        const tls = state.broker.tls ? "TLS" : "Plain";
+        const retentionLabel = formatRetention(state.broker.packet_retention_seconds);
+        elements.brokerMeta.textContent = `${transport.toUpperCase()} · ${tls} · Retention ${retentionLabel}`;
+        if (state.broker.title) {
+          elements.title.textContent = state.broker.title;
+          document.title = state.broker.title;
+        }
+      }
+
+      function renderStats() {
+        const nodes = Array.from(state.nodes.values());
+        const onlineCount = nodes.filter(isOnline).length;
+        const total = nodes.length;
+        elements.nodesOnline.textContent = formatNumber(onlineCount);
+        elements.nodesTotal.textContent = `${formatNumber(total)} total nodes tracked`;
+
+        const rate = state.stats.messages_per_min || 0;
+        elements.messagesRate.textContent = `${rate}/min`;
+        elements.messagesTotal.textContent = `${formatNumber(state.stats.messages_total || 0)} messages total`;
+
+      }
+
+      function renderNodes() {
+        const query = (elements.nodeFilter.value || "").trim().toLowerCase();
+        const onlineOnly = elements.onlineOnly.checked;
+        const nodes = Array.from(state.nodes.values())
+          .map((node) => ({ ...node, online: isOnline(node) }))
+          .filter((node) => {
+            if (onlineOnly && !node.online) return false;
+            if (!query) return true;
+            return (
+              node.node_id.toLowerCase().includes(query) ||
+              (node.name || "").toLowerCase().includes(query)
+            );
+          })
+          .sort((a, b) => {
+            if (a.online !== b.online) return a.online ? -1 : 1;
+            return (b.last_seen || 0) - (a.last_seen || 0);
+          });
+
+        elements.nodeTable.innerHTML = "";
+        nodes.forEach((node) => {
+          const row = document.createElement("tr");
+          if (node.node_id === selectedNodeId) {
+            row.classList.add("selected");
+          }
+          row.addEventListener("click", () => {
+            selectedNodeId = node.node_id;
+            renderNodeDetail();
+            renderNodes();
+          });
+
+          const statusCell = document.createElement("td");
+          const statusTag = document.createElement("span");
+          statusTag.className = "tag" + (node.online ? "" : " offline");
+          statusTag.textContent = node.online ? "Online" : "Offline";
+          statusCell.appendChild(statusTag);
+
+          const idCell = document.createElement("td");
+          const displayName = node.name || node.node_id;
+          idCell.textContent = displayName;
+          idCell.className = "node-name";
+          idCell.title = node.name ? node.node_id : "";
+
+          const seenCell = document.createElement("td");
+          seenCell.textContent = formatAge(node.last_seen);
+
+          [statusCell, idCell, seenCell].forEach((cell) => {
+            row.appendChild(cell);
+          });
+          elements.nodeTable.appendChild(row);
+        });
+      }
+
+      function renderNodeDetail() {
+        const node = selectedNodeId ? state.nodes.get(selectedNodeId) : null;
+        if (!node) {
+          elements.nodeDetail.innerHTML = "<p class=\"metric-sub\">Select a node to see its details.</p>";
+          return;
+        }
+        const online = isOnline(node);
+        const details = node.details || {};
+        const detailItems = Object.entries(details)
+          .map(
+            ([key, value]) =>
+              `<div class=\"detail\"><span>${escapeHtml(key)}</span><div>${escapeHtml(formatNumber(value))}</div></div>`
+          )
+          .join("");
+        elements.nodeDetail.innerHTML = `
+          <div class="detail">
+            <span>Status</span>
+            <div>${online ? "Online" : "Offline"}</div>
+          </div>
+          <div class="detail">
+            <span>Node</span>
+            <div class="mono">${escapeHtml(node.node_id)}</div>
+          </div>
+          <div class="detail">
+            <span>Name</span>
+            <div>${escapeHtml(node.name || "--")}</div>
+          </div>
+          <div class="detail">
+            <span>Role</span>
+            <div>${escapeHtml(node.role || "Unknown")}</div>
+          </div>
+          <div class="detail">
+            <span>Role Source</span>
+            <div>${escapeHtml(node.role_source || "--")}</div>
+          </div>
+          <div class="detail">
+            <span>Last Seen</span>
+            <div>${formatClock(node.last_seen)} (${formatAge(node.last_seen)})</div>
+          </div>
+          <div class="detail">
+            <span>Details</span>
+            <div>${detailItems ? "From latest status payload" : "No extra details"}</div>
+          </div>
+          <div class="details-list">${detailItems}</div>
+        `;
+      }
+
+      function renderBrokerDetail() {
+        const broker = state.broker || {};
+        const lines = [
+          ["Host", broker.host ? `${broker.host}:${broker.port}` : "--"],
+          ["Transport", broker.transport || "--"],
+          ["TLS", broker.tls ? "Enabled" : "Disabled"],
+          ["WS Path", broker.ws_path || "--"],
+          ["Topic", broker.topic || "--"],
+          ["Sys Topic", broker.sys_topic || "--"],
+          ["Client ID", broker.client_id || "--"],
+          ["Packet Retention", formatRetention(broker.packet_retention_seconds)],
+          ["Last Connect", formatClock(broker.last_connect)],
+          ["Last Disconnect", formatClock(broker.last_disconnect)],
+          ["Last Error", broker.last_error || "--"],
+        ];
+        elements.brokerDetail.innerHTML = lines
+          .map(
+            ([label, value]) =>
+              `<div class=\"detail\"><span>${escapeHtml(label)}</span><div class=\"mono\">${escapeHtml(value)}</div></div>`
+          )
+          .join("");
+      }
+
+      function renderSys() {
+        const query = (elements.sysFilter.value || "").trim().toLowerCase();
+        const topics = Object.entries(state.sysTopics)
+          .filter(([topic]) => !query || topic.toLowerCase().includes(query))
+          .sort(([a], [b]) => a.localeCompare(b));
+
+        elements.sysList.innerHTML = "";
+        topics.slice(0, 200).forEach(([topic, data]) => {
+          const item = document.createElement("div");
+          item.className = "sys-item";
+          const topicSpan = document.createElement("span");
+          topicSpan.textContent = topic;
+          const valueSpan = document.createElement("strong");
+          valueSpan.textContent = formatNumber(data.value);
+          item.appendChild(topicSpan);
+          item.appendChild(valueSpan);
+          elements.sysList.appendChild(item);
+        });
+      }
+
+      function sysValue(keys) {
+        for (const key of keys) {
+          if (state.sysTopics[key]) {
+            return state.sysTopics[key].value;
+          }
+        }
+        return null;
+      }
+
+      async function init() {
+        const storedTheme = localStorage.getItem("theme");
+        if (storedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", "light");
+          elements.themeToggle.textContent = "Dark Mode";
+        } else {
+          document.documentElement.removeAttribute("data-theme");
+          elements.themeToggle.textContent = "Light Mode";
+        }
+        try {
+          const response = await fetch("/snapshot");
+          if (response.ok) {
+            const data = await response.json();
+            applySnapshot(data);
+          }
+        } catch (error) {
+          console.warn("Snapshot load failed", error);
+        }
+
+        const scheme = location.protocol === "https:" ? "wss" : "ws";
+        const ws = new WebSocket(`${scheme}://${location.host}/ws`);
+        ws.addEventListener("message", (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === "snapshot") {
+            applySnapshot(data);
+          } else if (data.type === "node_update") {
+            applyNodeUpdate(data.node, data.stats);
+          } else if (data.type === "sys_update") {
+            applySysUpdate(data.topic, data.value);
+          } else if (data.type === "broker_status") {
+            applyBrokerUpdate(data.broker);
+          }
+        });
+      }
+
+      elements.nodeFilter.addEventListener("input", renderNodes);
+      elements.onlineOnly.addEventListener("change", renderNodes);
+      elements.sysFilter.addEventListener("input", renderSys);
+      elements.themeToggle.addEventListener("click", () => {
+        const isLight = document.documentElement.getAttribute("data-theme") === "light";
+        if (isLight) {
+          document.documentElement.removeAttribute("data-theme");
+          localStorage.setItem("theme", "dark");
+          elements.themeToggle.textContent = "Light Mode";
+        } else {
+          document.documentElement.setAttribute("data-theme", "light");
+          localStorage.setItem("theme", "light");
+          elements.themeToggle.textContent = "Dark Mode";
+        }
+      });
+
+      setInterval(() => {
+        renderNodes();
+        renderStats();
+        renderNodeDetail();
+      }, 5000);
+
+      init();
+    </script>
+  </body>
+</html>
