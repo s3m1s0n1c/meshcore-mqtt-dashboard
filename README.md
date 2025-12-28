@@ -3,7 +3,7 @@
 A lightweight dashboard for MQTT brokers that tracks nodes, roles, and broker telemetry in real time.
 It mirrors the MQTT settings used in `mesh-live-map` and adds a live node table plus $SYS metrics.
 
-![Dashboard preview](./example.png)
+![Dashboard preview](./docs/example.png)
 
 ## Quick start (recommended: Docker)
 
