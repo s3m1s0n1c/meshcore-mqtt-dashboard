@@ -10,6 +10,8 @@ It mirrors the MQTT settings used in `mesh-live-map` and adds a live node table 
 ```bash
 git clone https://github.com/yellowcooln/meshcore-mqtt-dashboard
 cd meshcore-mqtt-dashboard
+cp .env.example .env
+nano .env
 docker compose up -d --build
 ```
 
