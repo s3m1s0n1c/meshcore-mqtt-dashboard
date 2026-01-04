@@ -10,8 +10,6 @@ It mirrors the MQTT settings used in `mesh-live-map` and adds a live node table 
 ```bash
 git clone https://github.com/yellowcooln/meshcore-mqtt-dashboard
 cd meshcore-mqtt-dashboard
-cp .env.example .env
-nano .env
 docker compose up -d --build
 ```
 
@@ -49,6 +47,7 @@ Copy `.env.example` into your environment or export variables before running. Th
 - `MQTT_AUTH_TOKEN_SCHEME` (default `Bearer`)
 - `PACKET_RETENTION_SECONDS` (packet database retention; default 7200 seconds)
 - `PACKET_DB_PATH` (SQLite DB path; default `/data/packets.db`)
+- `NODE_PURGE_SECONDS` (remove nodes after inactivity; default 600 seconds)
 
 ## Notes
 

@@ -53,13 +53,23 @@
         box-sizing: border-box;
       }
 
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+      }
+
+      html {
+        background: var(--bg-gradient);
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
         font-family: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
         color: var(--ink);
         overflow-x: hidden;
-        background: var(--bg-gradient);
+        background: transparent;
       }
 
       body::before {
@@ -75,6 +85,7 @@
       .app {
         position: relative;
         padding: 36px 40px 48px;
+        width: 100%;
         max-width: 1280px;
         margin: 0 auto;
         animation: fade-in 600ms ease-out;
@@ -92,6 +103,8 @@
         display: inline-flex;
         align-items: center;
         gap: 12px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
       }
 
       .title-block h1 {
@@ -147,7 +160,33 @@
         box-shadow: var(--shadow);
       }
 
+      .github-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: var(--panel);
+        color: var(--ink);
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        text-decoration: none;
+        box-shadow: var(--shadow);
+      }
+
+      .github-link:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
       [data-theme="light"] .theme-toggle {
+        border-color: rgba(24, 40, 64, 0.2);
+      }
+
+      [data-theme="light"] .github-link {
         border-color: rgba(24, 40, 64, 0.2);
       }
 
@@ -156,6 +195,7 @@
         grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
         gap: 18px;
         margin-bottom: 24px;
+        width: 100%;
       }
 
       .card {
@@ -165,6 +205,7 @@
         padding: 18px 18px 16px;
         box-shadow: var(--shadow);
         min-width: 0;
+        width: 100%;
         animation: rise 540ms ease-out;
       }
 
@@ -194,6 +235,8 @@
         display: grid;
         grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
         gap: 24px;
+        width: 100%;
+        min-width: 0;
       }
 
       .panel {
@@ -202,6 +245,9 @@
         border-radius: 22px;
         padding: 18px 18px 20px;
         box-shadow: var(--shadow);
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
       }
 
       .panel h2 {
@@ -251,6 +297,7 @@
         border-collapse: collapse;
         table-layout: fixed;
         font-size: 0.92rem;
+        min-width: 520px;
       }
 
       th,
@@ -288,6 +335,8 @@
 
       .table-wrap {
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
       }
 
       .node-name {
@@ -404,9 +453,52 @@
         }
       }
 
+      @media (max-width: 720px) {
+        .app {
+          padding: 28px 22px 36px;
+          margin: 0;
+          max-width: 100%;
+        }
+
+        .title-block h1 {
+          font-size: 1.8rem;
+        }
+
+        .title-block p {
+          font-size: 0.88rem;
+        }
+
+        .header-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .github-link,
+        .theme-toggle,
+        .status-pill {
+          flex: 1 1 auto;
+          justify-content: center;
+        }
+
+        .filters {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .filters input[type="text"] {
+          min-width: 100%;
+        }
+
+        table {
+          min-width: 0;
+        }
+      }
+
       @media (max-width: 640px) {
         .app {
           padding: 24px 18px 36px;
+          margin: 0;
+          max-width: 100%;
         }
 
         .metrics {
@@ -415,6 +507,12 @@
 
         table {
           font-size: 0.85rem;
+        }
+      }
+
+      @media (max-width: 520px) {
+        table {
+          min-width: 420px;
         }
       }
     </style>
@@ -427,6 +525,7 @@
           <p id="dash-subtitle">Live node presence, roles, and broker telemetry.</p>
         </div>
         <div class="header-actions">
+          <a class="github-link" href="https://github.com/yellowcooln/meshcore-mqtt-dashboard" target="_blank" rel="noopener">GitHub</a>
           <button class="theme-toggle" id="theme-toggle" type="button">Light Mode</button>
           <div class="status-pill" id="status-pill">
             <span class="status-dot"></span>
@@ -847,6 +946,13 @@
             applySysUpdate(data.topic, data.value);
           } else if (data.type === "broker_status") {
             applyBrokerUpdate(data.broker);
+          } else if (data.type === "node_remove") {
+            state.nodes.delete(data.node_id);
+            if (selectedNodeId === data.node_id) {
+              selectedNodeId = null;
+            }
+            renderNodes();
+            renderNodeDetail();
           }
         });
       }

@@ -1,0 +1,36 @@
+# MQTT Dashboard: Implementation Notes
+
+## Overview
+This project provides a live MQTT dashboard that tracks broker status and node presence. A FastAPI backend subscribes to MQTT, stores recent packets in SQLite with a retention window, and streams updates to the frontend over WebSockets.
+
+## Key Paths
+- `backend/app.py`: FastAPI server, MQTT client, packet storage, websocket broadcasting.
+- `backend/static/index.html`: dashboard UI, tables, and theme toggle.
+- `docker-compose.yaml`: runtime configuration.
+- `data/packets.db`: SQLite packet storage (retained by `PACKET_RETENTION_SECONDS`).
+- `.env`: runtime configuration (mirrors `.env.example`).
+
+## Runtime Commands
+- `docker compose up -d --build` (run after any file changes).
+- `docker compose logs -f mqtt-dashboard` (watch MQTT + app logs).
+- `curl -s http://localhost:8081/snapshot` (broker + node snapshot).
+- `curl -s http://localhost:8081/packets?limit=50` (recent packets).
+
+## MQTT + Broker
+- Supports `tcp` or `websockets` with TLS.
+- Optional websocket auth token header (`MQTT_AUTH_TOKEN`, `MQTT_AUTH_TOKEN_HEADER`).
+- $SYS topics are optional and displayed when available.
+
+## Packet Retention
+- Packets are stored in SQLite and purged on write based on `PACKET_RETENTION_SECONDS`.
+- Retention is clamped to a maximum of 24 hours.
+- Node names are cached from the packet DB on startup.
+
+## Node Lifecycle
+- Nodes are removed from the in-memory list after `NODE_PURGE_SECONDS` of inactivity.
+- Purges broadcast a `node_remove` event to connected clients.
+
+## UI Notes
+- Dark mode is default with a light mode toggle (saved in localStorage).
+- Node list focuses on status, name, and last seen only.
+- Broker detail shows configuration, auth mode, and packet retention.

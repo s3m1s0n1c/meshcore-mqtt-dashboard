@@ -26,6 +26,7 @@ services:
       MQTT_AUTH_TOKEN_SCHEME: "${MQTT_AUTH_TOKEN_SCHEME:-Bearer}"
       PACKET_RETENTION_SECONDS: "${PACKET_RETENTION_SECONDS:-7200}"
       PACKET_DB_PATH: "${PACKET_DB_PATH:-/data/packets.db}"
+      NODE_PURGE_SECONDS: "${NODE_PURGE_SECONDS:-600}"
       ROLE_OVERRIDES_FILE: "${ROLE_OVERRIDES_FILE:-/data/device_roles.json}"
     restart: unless-stopped
     volumes:

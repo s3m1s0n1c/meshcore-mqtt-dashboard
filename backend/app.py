@@ -48,6 +48,7 @@ ROLE_OVERRIDES_FILE = os.getenv(
 PACKET_DB_PATH = os.getenv("PACKET_DB_PATH", os.path.join(DATA_DIR, "packets.db"))
 PACKET_RETENTION_RAW = int(os.getenv("PACKET_RETENTION_SECONDS", "7200"))
 PACKET_RETENTION_SECONDS = max(0, min(PACKET_RETENTION_RAW, 86400))
+NODE_PURGE_SECONDS = int(os.getenv("NODE_PURGE_SECONDS", "3600"))
 
 NODE_ID_KEYS = (
   "device_id",
@@ -464,6 +465,7 @@ def _update_sys(topic: str, payload_info: Dict[str, Any]) -> Any:
 def _record_message() -> None:
   global message_total, last_message_at
   now = time.time()
+  removed_nodes = []
   with state_lock:
     message_total += 1
     last_message_at = now
@@ -471,6 +473,14 @@ def _record_message() -> None:
     cutoff = now - STATS_WINDOW_SECONDS
     while message_times and message_times[0] < cutoff:
       message_times.popleft()
+    if NODE_PURGE_SECONDS > 0:
+      purge_cutoff = now - NODE_PURGE_SECONDS
+      for node_id, node in list(nodes.items()):
+        if node.last_seen and node.last_seen < purge_cutoff:
+          nodes.pop(node_id, None)
+          removed_nodes.append(node_id)
+  for node_id in removed_nodes:
+    _queue_broadcast({"type": "node_remove", "node_id": node_id})
 
 
 def _build_stats(now: float) -> Dict[str, Any]:
